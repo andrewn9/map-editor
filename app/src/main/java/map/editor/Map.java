@@ -14,6 +14,7 @@ import javafx.scene.control.Cell;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
@@ -22,13 +23,24 @@ import javafx.event.EventHandler;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.scene.text.Text;
+import javafx.scene.Group;
+import javafx.scene.text.TextAlignment;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.control.ToolBar;
 
 import map.editor.MapTab;
+
 
 public class Map{
 
     private int[][] map;
     private File file;
+
+    private ToolBar toolbar;
 
     private ScrollPane scrollPane;
     private GridPane gridPane;
@@ -47,25 +59,24 @@ public class Map{
         this.width = width;
         this.height = height;
         this.map = new int[width][height];
-        this.tab = new MapTab("Untitled",this);
+        this.tab = new MapTab("Untitled", this);
 
         this.gridPane = new GridPane();
         this.scrollPane = new ScrollPane();
 
         BorderPane borderPane = new BorderPane();
         this.tab.setContent(borderPane);
-
+        
         createButtons();
         redraw();
-        
+
         // Add scrolling
         this.scrollPane.setContent(gridPane);
         this.scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         this.scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
 
         borderPane.setCenter(scrollPane);
-        createButtonPane();
-        borderPane.setBottom(getButtonPane());
+        borderPane.setBottom(toolbar);
     }
 
     public Map(int[][] array, File file)
@@ -125,7 +136,6 @@ public class Map{
             // Write JSON string to file
             try (FileWriter writer = new FileWriter(file.getPath())) {
                 gson.toJson(map, writer);
-                System.out.println("saved");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -138,7 +148,35 @@ public class Map{
 
     public void saveAs()
     {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save As");
         
+        // Set extension filter for JSON files
+        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("JSON files (*.json)", "*.json");
+        
+        File mapFolder = new File("maps");
+        fileChooser.setInitialDirectory(mapFolder);
+
+        fileChooser.getExtensionFilters().add(extFilter);
+        
+        // Show save file dialog
+        File saveFile = fileChooser.showSaveDialog(new Stage());
+        
+        if (saveFile != null) {
+            try {
+                // Serialize your data to JSON string
+                String jsonData = new Gson().toJson(map);
+                
+                // Write JSON string to file
+                FileWriter writer = new FileWriter(saveFile);
+                writer.write(jsonData);
+                writer.close();
+                this.file = saveFile;
+                this.tab.setText(saveFile.getName());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void redraw() {
@@ -148,9 +186,18 @@ public class Map{
         // Re-populate the grid pane with new cells
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
+
                 Rectangle rectangle = new Rectangle(size, size);
-                rectangle.setStyle("-fx-fill: black; -fx-stroke: white; -fx-stroke-width: 1;");
-                gridPane.add(rectangle, col, row);
+                rectangle.setStyle("-fx-fill: white; -fx-stroke: rgba(0, 0, 0, 0.5); -fx-stroke-width: 1;");
+            
+                Text text = new Text(String.valueOf(map[row][col]));
+                text.setFill(Color.rgb(0, 0, 0, 0.5));
+                text.setFont(Font.font("Arial", FontWeight.BOLD, size / 2));
+                text.setX(rectangle.getX() + (size - text.getLayoutBounds().getWidth()) / 2);
+                text.setY(rectangle.getY() + (size + text.getLayoutBounds().getHeight()) / 2);
+
+                Group group = new Group(rectangle, text);
+                gridPane.add(group, col, row);
             }
         }
 

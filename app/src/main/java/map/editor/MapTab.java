@@ -10,6 +10,7 @@ public class MapTab extends Tab {
         super(title);
         this.map = map;
     }
+
     public Map getMap() {
         return map;
     }
