@@ -1,5 +1,8 @@
 package map.editor;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
@@ -14,6 +17,7 @@ import javafx.application.Application;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -30,16 +34,25 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+
 import javafx.stage.Stage;
+import javafx.stage.FileChooser;
+
 import javafx.util.Pair;
 
 import map.editor.Map;
+import map.editor.MapTab;
 
 public class App extends Application {
 
     private TabPane tabPane;
     private BorderPane root;
     private Gson gson;
+
+    private MenuItem saveMenuItem;
+    private MenuItem saveAsMenuItem;
+
+    private Tab currentTab;
 
     @Override
     public void start(Stage stage) {
@@ -52,7 +65,10 @@ public class App extends Application {
         // Add dropdown for file
         MenuItem newMenuItem = new MenuItem("New");
         MenuItem openMenuItem = new MenuItem("Open from File");
-        fileMenu.getItems().addAll(newMenuItem, openMenuItem);
+        saveMenuItem = new MenuItem("Save");
+        saveAsMenuItem = new MenuItem("Save as..");
+        
+        fileMenu.getItems().addAll(newMenuItem, openMenuItem, saveMenuItem, saveAsMenuItem);
 
         // Create a tab pane to hold the open maps
         tabPane = new TabPane();
@@ -70,11 +86,34 @@ public class App extends Application {
         stage.setTitle("Map Editor");
         stage.show();
 
+        // Keep track of current tab
+        tabPane.getSelectionModel().selectedItemProperty().addListener((observable, oldTab, newTab) -> {
+            currentTab = newTab;
+        });
+
         // Set up event handlers for menu items
         noFile();
         tabPane.getTabs().addListener((ListChangeListener<Tab>) change -> {
             if (tabPane.getTabs().isEmpty()) {
                 noFile();
+            }
+        });
+        
+        saveMenuItem.setOnAction(event -> {
+            if (currentTab != null) {
+                Map currentMap = ((MapTab)tabPane.getSelectionModel().getSelectedItem()).getMap(); 
+                if (currentMap != null) {
+                    currentMap.save();
+                }
+            }
+        });
+        
+        saveAsMenuItem.setOnAction(event -> {
+            if (currentTab != null) {
+                Map currentMap = ((MapTab)tabPane.getSelectionModel().getSelectedItem()).getMap(); 
+                if (currentMap != null) {
+                    currentMap.saveAs();
+                }
             }
         });
 
@@ -94,11 +133,47 @@ public class App extends Application {
         messageLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: gray;");
         BorderPane.setAlignment(messageLabel, Pos.CENTER);
         root.setCenter(messageLabel);
+
+        // Disable saving
+        saveMenuItem.setDisable(true);
+        saveAsMenuItem.setDisable(true);
     }
 
     private void openFile()
     {
-        // To be implemented
+        // Create a file explorer dialogue and look for .jsons
+        FileChooser fileChooser = new FileChooser();
+        File mapFolder = new File("maps");
+        fileChooser.setTitle("Open Map File");
+        fileChooser.setInitialDirectory(mapFolder);
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON files", "*.json"));
+
+        // Show the dialog and get the selected file
+        File selectedFile = fileChooser.showOpenDialog(root.getScene().getWindow());
+        if (selectedFile != null) {
+            // Read the map data from the selected file
+            try {
+                Scanner scanner = new Scanner(selectedFile);
+                Gson gson = new Gson();
+
+                // Read array from json
+                BufferedReader br = new BufferedReader(new FileReader(selectedFile));
+                int[][] mapArray = gson.fromJson(br, int[][].class);
+               
+                Map map = new Map(mapArray, selectedFile);
+
+                tabPane.getTabs().add(map.getTab());
+                tabPane.getSelectionModel().select(map.getTab());
+                root.setCenter(tabPane);
+
+                // // Enable saving
+                saveMenuItem.setDisable(false);
+                saveAsMenuItem.setDisable(false);
+            } catch (IOException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Error reading file: " + e.getMessage());
+                alert.showAndWait();
+            }
+        }
     }
 
     private void handleNewFile() {
@@ -150,6 +225,10 @@ public class App extends Application {
             tabPane.getTabs().add(newMap.getTab());
             tabPane.getSelectionModel().select(newMap.getTab());
             root.setCenter(tabPane);
+                
+            // Enable saving
+            saveMenuItem.setDisable(false);
+            saveAsMenuItem.setDisable(false);
         });
 
     }

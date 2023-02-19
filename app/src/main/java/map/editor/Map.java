@@ -1,10 +1,13 @@
 package map.editor;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.control.Cell;
@@ -20,9 +23,13 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
-public class Map {
+import map.editor.MapTab;
+
+public class Map{
 
     private int[][] map;
+    private File file;
+
     private ScrollPane scrollPane;
     private GridPane gridPane;
     private AnchorPane buttonPane;
@@ -40,7 +47,35 @@ public class Map {
         this.width = width;
         this.height = height;
         this.map = new int[width][height];
-        this.tab = new Tab("Untitled");
+        this.tab = new MapTab("Untitled",this);
+
+        this.gridPane = new GridPane();
+        this.scrollPane = new ScrollPane();
+
+        BorderPane borderPane = new BorderPane();
+        this.tab.setContent(borderPane);
+
+        createButtons();
+        redraw();
+        
+        // Add scrolling
+        this.scrollPane.setContent(gridPane);
+        this.scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        this.scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+        borderPane.setCenter(scrollPane);
+        createButtonPane();
+        borderPane.setBottom(getButtonPane());
+    }
+
+    public Map(int[][] array, File file)
+    {   
+        // Initialize map and UI elements
+        this.width = array[0].length;
+        this.height = array.length;
+        this.map = array;
+        this.tab = new MapTab(file.getName(),this);
+        setFile(file);
 
         this.gridPane = new GridPane();
         this.scrollPane = new ScrollPane();
@@ -75,6 +110,37 @@ public class Map {
         fitButton = new Button("=");
     }
 
+    public void setFile(File file)
+    {
+        this.file = file;
+    }
+
+    public void save()
+    {
+        if(file != null)
+        {
+            // Create Gson instance
+            Gson gson = new Gson();
+
+            // Write JSON string to file
+            try (FileWriter writer = new FileWriter(file.getPath())) {
+                gson.toJson(map, writer);
+                System.out.println("saved");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else
+        {
+            saveAs();
+        }
+    }
+
+    public void saveAs()
+    {
+        
+    }
+
     public void redraw() {
         // Clear all children in gridPane
         gridPane.getChildren().clear();
@@ -93,10 +159,11 @@ public class Map {
         createButtonPane();
 
         // Bind events to buttons
-        plusButton.setOnAction(event -> zoom(0.05));
-        minusButton.setOnAction(event -> zoom(-.05));
+        plusButton.setOnAction(event -> zoom(5));
+        minusButton.setOnAction(event -> zoom(-5));
         fitButton.setOnAction(event -> fitMapToWindow());
     }
+
     public void createButtonPane()
     {
         // Create "sticky" pane in bottom right
