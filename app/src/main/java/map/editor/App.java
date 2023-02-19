@@ -149,7 +149,7 @@ public class App extends Application {
             Map newMap = new Map(widthHeight.getKey(), widthHeight.getValue());
             tabPane.getTabs().add(newMap.getTab());
             tabPane.getSelectionModel().select(newMap.getTab());
-            root.setCenter(tabPane); // set the center of the BorderPane to the tabPane
+            root.setCenter(tabPane);
         });
 
     }
