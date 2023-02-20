@@ -5,3 +5,7 @@ made with gson and javafx
 
 to build, compile using gradle
 ./gradlew run
+or gradle build
+
+jar will be generated in build/libs
+
